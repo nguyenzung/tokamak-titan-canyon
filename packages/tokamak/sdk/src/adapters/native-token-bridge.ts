@@ -14,9 +14,9 @@ import {
 } from '@ethersproject/abstract-provider'
 import { predeploys } from '@eth-optimism/contracts'
 import { hexStringEquals } from '@eth-optimism/core-utils'
-import l1StandardBridgeArtifact from '@eth-optimism/contracts-bedrock/forge-artifacts/L1StandardBridge.sol/L1StandardBridge.json'
-import l2StandardBridgeArtifact from '@eth-optimism/contracts-bedrock/forge-artifacts/L2StandardBridge.sol/L2StandardBridge.json'
-import optimismMintableERC20 from '@eth-optimism/contracts-bedrock/forge-artifacts/OptimismMintableERC20.sol/OptimismMintableERC20.json'
+import l1StandardBridgeArtifact from '@tokamak-network/titan2-contracts/forge-artifacts/L1StandardBridge.sol/L1StandardBridge.json'
+import l2StandardBridgeArtifact from '@tokamak-network/titan2-contracts/forge-artifacts/L2StandardBridge.sol/L2StandardBridge.json'
+import optimismMintableERC20 from '@tokamak-network/titan2-contracts/forge-artifacts/OptimismMintableERC20.sol/OptimismMintableERC20.json'
 
 import { CrossChainMessenger } from '../cross-chain-messenger'
 import {
@@ -26,7 +26,12 @@ import {
   TokenBridgeMessage,
   MessageDirection,
 } from '../interfaces'
-import { toAddress } from '../utils'
+import {
+  filterOutEthDepositsAndWithdrawls,
+  filterTonDepositsAndWithdrawls,
+  toAddress,
+} from '../utils'
+import { StandardBridgeAdapter } from './standard-bridge'
 
 /**
  * Bridge adapter for any token bridge that uses the standard token bridge interface.
@@ -80,15 +85,9 @@ export class NativeTokenBridgeAdapter implements IBridgeAdapter {
     )
 
     return events
-      .filter((event) => {
-        // Specifically filter out ETH. ETH deposits and withdrawals are handled by the ETH bridge
-        // adapter. Bridges that are not the ETH bridge should not be able to handle or even
-        // present ETH deposits or withdrawals.
-        return (
-          !hexStringEquals(event.args.l1Token, ethers.constants.AddressZero) &&
-          !hexStringEquals(event.args.l2Token, predeploys.OVM_ETH)
-        )
-      })
+      .filter((event) =>
+        this.supportsTokenPair(event.args.l1Token, event.args.l2Token)
+      )
       .map((event) => {
         return {
           direction: MessageDirection.L1_TO_L2,
@@ -123,12 +122,9 @@ export class NativeTokenBridgeAdapter implements IBridgeAdapter {
     )
 
     return events
-      .filter((event) => {
-        return (
-          !hexStringEquals(event.args.l1Token, ethers.constants.AddressZero) &&
-          !hexStringEquals(event.args.l2Token, predeploys.OVM_ETH)
-        )
-      })
+      .filter((event) =>
+        this.supportsTokenPair(event.args.l1Token, event.args.l2Token)
+      )
       .map((event) => {
         return {
           direction: MessageDirection.L2_TO_L1,
@@ -153,7 +149,7 @@ export class NativeTokenBridgeAdapter implements IBridgeAdapter {
     l1Token: AddressLike,
     l2Token: AddressLike
   ): Promise<boolean> {
-    return true
+    return filterTonDepositsAndWithdrawls(l1Token, l2Token)
   }
 
   public async approval(
