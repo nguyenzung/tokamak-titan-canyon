@@ -12,7 +12,7 @@ import {
   TransactionResponse,
   BlockTag,
 } from '@ethersproject/abstract-provider'
-import { hexStringEquals } from '@eth-optimism/core-utils'
+import { hexStringEquals, predeploys } from '@eth-optimism/core-utils'
 import l1StandardBridgeArtifact from '@tokamak-network/titan2-contracts/forge-artifacts/L1StandardBridge.sol/L1StandardBridge.json'
 import l2StandardBridgeArtifact from '@tokamak-network/titan2-contracts/forge-artifacts/L2StandardBridge.sol/L2StandardBridge.json'
 import optimismMintableERC20 from '@tokamak-network/titan2-contracts/forge-artifacts/OptimismMintableERC20.sol/OptimismMintableERC20.json'
@@ -25,11 +25,7 @@ import {
   TokenBridgeMessage,
   MessageDirection,
 } from '../interfaces'
-import {
-  filterEthDepositsAndWithdrawls,
-  filterTonDepositsAndWithdrawls,
-  toAddress,
-} from '../utils'
+import { toAddress } from '../utils'
 
 /**
  * Bridge adapter for any token bridge that uses the standard token bridge interface.
@@ -83,8 +79,16 @@ export class StandardBridgeAdapter implements IBridgeAdapter {
     )
 
     return events
-      .filter((event) =>
-        this.supportsTokenPair(event.args.l1Token, event.args.l2Token)
+      .filter(
+        (event) =>
+          this.filterOutEthDepositsAndWithdrawls(
+            event.args.l1Token,
+            event.args.l2Token
+          ) &&
+          this.filterOutTonDepositsAndWithdrawls(
+            event.args.l1Token,
+            event.args.l2Token
+          )
       )
       .map((event) => {
         return {
@@ -120,8 +124,16 @@ export class StandardBridgeAdapter implements IBridgeAdapter {
     )
 
     return events
-      .filter((event) =>
-        this.supportsTokenPair(event.args.l1Token, event.args.l2Token)
+      .filter(
+        (event) =>
+          this.filterOutEthDepositsAndWithdrawls(
+            event.args.l1Token,
+            event.args.l2Token
+          ) &&
+          this.filterOutTonDepositsAndWithdrawls(
+            event.args.l1Token,
+            event.args.l2Token
+          )
       )
       .map((event) => {
         return {
@@ -153,13 +165,17 @@ export class StandardBridgeAdapter implements IBridgeAdapter {
         optimismMintableERC20.abi,
         this.messenger.l2Provider
       )
-      // Don't support ETH deposits or withdrawals via this bridge.
-      if (filterEthDepositsAndWithdrawls(l1Token, l2Token)) {
+      // Specifically filter out ETH. ETH deposits and withdrawals are handled by the ETH bridge
+      // adapter. Bridges that are not the ETH bridge should not be able to handle or even
+      // present ETH deposits or withdrawals.
+      if (this.filterOutEthDepositsAndWithdrawls(l1Token, l2Token)) {
         return false
       }
 
-      // Don't support TON deposits or withdrawls via this bridge.
-      if (filterTonDepositsAndWithdrawls(l1Token, l2Token)) {
+      // Specifically filter out TON. TON deposits and withdrawals are handled by the TON bridge
+      // adapter. Bridges that are not the TON bridge should not be able to handle or even
+      // present TON deposits or withdrawals.
+      if (this.filterOutTonDepositsAndWithdrawls(l1Token, l2Token)) {
         return false
       }
 
@@ -251,6 +267,47 @@ export class StandardBridgeAdapter implements IBridgeAdapter {
   ): Promise<TransactionResponse> {
     return signer.sendTransaction(
       await this.populateTransaction.withdraw(l1Token, l2Token, amount, opts)
+    )
+  }
+
+  public filterOutEthDepositsAndWithdrawls = (
+    l1Token: AddressLike,
+    l2Token: AddressLike
+  ): boolean => {
+    return (
+      !hexStringEquals(toAddress(l1Token), ethers.constants.AddressZero) &&
+      !hexStringEquals(toAddress(l2Token), predeploys.ETH)
+    )
+  }
+
+  public filterEthDepositsAndWithdrawls = (
+    l1Token: AddressLike,
+    l2Token: AddressLike
+  ): boolean => {
+    return (
+      hexStringEquals(toAddress(l1Token), ethers.constants.AddressZero) &&
+      hexStringEquals(toAddress(l2Token), predeploys.ETH)
+    )
+  }
+
+  public filterOutTonDepositsAndWithdrawls = (
+    l1Token: AddressLike,
+    l2Token: AddressLike
+  ): boolean => {
+    return (
+      !hexStringEquals(toAddress(l1Token), this.messenger.l1TonAddress) &&
+      !hexStringEquals(toAddress(l2Token), predeploys.L2Ton)
+    )
+  }
+
+  filterTonDepositsAndWithdrawls = (
+    l1Token: AddressLike,
+    l2Token: AddressLike
+  ): boolean => {
+    console.log('L1 Ton Address', this.messenger.l1TonAddress)
+    return (
+      hexStringEquals(toAddress(l1Token), this.messenger.l1TonAddress) &&
+      hexStringEquals(toAddress(l2Token), predeploys.L2Ton)
     )
   }
 

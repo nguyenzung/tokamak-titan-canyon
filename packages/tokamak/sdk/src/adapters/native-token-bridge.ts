@@ -12,25 +12,15 @@ import {
   TransactionResponse,
   BlockTag,
 } from '@ethersproject/abstract-provider'
-import { predeploys } from '@eth-optimism/contracts'
-import { hexStringEquals } from '@eth-optimism/core-utils'
-import l1StandardBridgeArtifact from '@tokamak-network/titan2-contracts/forge-artifacts/L1StandardBridge.sol/L1StandardBridge.json'
-import l2StandardBridgeArtifact from '@tokamak-network/titan2-contracts/forge-artifacts/L2StandardBridge.sol/L2StandardBridge.json'
 import optimismMintableERC20 from '@tokamak-network/titan2-contracts/forge-artifacts/OptimismMintableERC20.sol/OptimismMintableERC20.json'
 
-import { CrossChainMessenger } from '../cross-chain-messenger'
 import {
-  IBridgeAdapter,
   NumberLike,
   AddressLike,
   TokenBridgeMessage,
   MessageDirection,
 } from '../interfaces'
-import {
-  filterOutEthDepositsAndWithdrawls,
-  filterTonDepositsAndWithdrawls,
-  toAddress,
-} from '../utils'
+import { toAddress } from '../utils'
 import { StandardBridgeAdapter } from './standard-bridge'
 
 /**
@@ -149,7 +139,9 @@ export class NativeTokenBridgeAdapter implements IBridgeAdapter {
     l1Token: AddressLike,
     l2Token: AddressLike
   ): Promise<boolean> {
-    return filterTonDepositsAndWithdrawls(l1Token, l2Token)
+    // Only support TON deposits and withdrawals.
+    console.log('l1Token', l1Token, 'l2Token', l2Token)
+    return this.filterTonDepositsAndWithdrawls(l1Token, l2Token)
   }
 
   public async approval(
