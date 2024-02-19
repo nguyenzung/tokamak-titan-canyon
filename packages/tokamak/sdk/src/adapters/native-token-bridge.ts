@@ -15,9 +15,9 @@ import {
 import optimismMintableERC20 from '@tokamak-network/titan2-contracts/forge-artifacts/OptimismMintableERC20.sol/OptimismMintableERC20.json'
 
 import {
+  TokenBridgeMessage,
   NumberLike,
   AddressLike,
-  TokenBridgeMessage,
   MessageDirection,
 } from '../interfaces'
 import { toAddress } from '../utils'
@@ -26,37 +26,7 @@ import { StandardBridgeAdapter } from './standard-bridge'
 /**
  * Bridge adapter for any token bridge that uses the standard token bridge interface.
  */
-export class NativeTokenBridgeAdapter implements IBridgeAdapter {
-  public messenger: CrossChainMessenger
-  public l1Bridge: Contract
-  public l2Bridge: Contract
-
-  /**
-   * Creates a NativeBridgeAdapter instance.
-   *
-   * @param opts Options for the adapter.
-   * @param opts.messenger Provider used to make queries related to cross-chain interactions.
-   * @param opts.l1Bridge L1 bridge contract.
-   * @param opts.l2Bridge L2 bridge contract.
-   */
-  constructor(opts: {
-    messenger: CrossChainMessenger
-    l1Bridge: AddressLike
-    l2Bridge: AddressLike
-  }) {
-    this.messenger = opts.messenger
-    this.l1Bridge = new Contract(
-      toAddress(opts.l1Bridge),
-      l1StandardBridgeArtifact.abi,
-      this.messenger.l1Provider
-    )
-    this.l2Bridge = new Contract(
-      toAddress(opts.l2Bridge),
-      l2StandardBridgeArtifact.abi,
-      this.messenger.l2Provider
-    )
-  }
-
+export class NativeTokenBridgeAdapter extends StandardBridgeAdapter {
   public async getDepositsByAddress(
     address: AddressLike,
     opts?: {
@@ -140,7 +110,6 @@ export class NativeTokenBridgeAdapter implements IBridgeAdapter {
     l2Token: AddressLike
   ): Promise<boolean> {
     // Only support TON deposits and withdrawals.
-    console.log('l1Token', l1Token, 'l2Token', l2Token)
     return this.filterTonDepositsAndWithdrawls(l1Token, l2Token)
   }
 
