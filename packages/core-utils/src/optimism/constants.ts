@@ -30,10 +30,6 @@ export const predeploys = {
   ETH: '0x4200000000000000000000000000000000000486',
 }
 
-export const L1Predeploys = {
-  L1TonAddress: '0x2be5e8c109e2197d077d13a82daead6a9b3433c5',
-}
-
 const uint128Max = ethers.BigNumber.from('0xffffffffffffffffffffffffffffffff')
 
 export const defaultResourceConfig = {
