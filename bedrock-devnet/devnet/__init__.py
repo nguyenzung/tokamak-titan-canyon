@@ -129,7 +129,9 @@ def main():
                     cwd=paths.ops_bedrock_dir, env={
             'PWD': paths.ops_bedrock_dir,
             'DOCKER_BUILDKIT': '1', # (should be available by default in later versions, but explicitly enable it anyway)
-            'COMPOSE_DOCKER_CLI_BUILD': '1'  # use the docker cache
+            'COMPOSE_DOCKER_CLI_BUILD': '1',  # use the docker cache
+            'L1_RPC': paths.l1_rpc_url,
+            'FROM_BLOCK_NUMBER': str(paths.from_block_number)
           })
         else:
           run_command(['docker', 'compose', 'build', '--progress', 'plain',
